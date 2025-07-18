@@ -1,78 +1,4 @@
-
-# # simulate_vsa_lon_g.py
-# import random
-
-# def generate_simulated_vsa_lon_g(current_sim_time):
-#     """
-#     Generates a simulated VSA_LON_G value based on the current simulation time.
-#     Range for VSA_LON_G: [-24.5|24.452148949] m/s^2.
-#     Simulates longitudinal acceleration/deceleration.
-#     """
-#     if current_sim_time < 50:
-#         # Normal, alert driving (consistent acceleration/deceleration)
-#         return random.uniform(-0.5, 0.5) # m/s^2
-#     elif current_sim_time < 120:
-#         # Fatigue-like driving (more inconsistent, jerky acceleration/deceleration)
-#         return random.uniform(-1.0, 1.0) # m/s^2
-#     else:
-#         # Returning to more normal
-#         return random.uniform(-0.7, 0.7) # m/s^2
-
-
-# def generate_simulated_str_angle(current_sim_time):
-#     """
-#     Generates a simulated STR_ANGLE value based on the current simulation time.
-#     The STR_ANGLE range is [-3276.8|3276.7] degrees.
-#     Simulated values will be within a typical driving range (e.g., +/- 20 degrees from center),
-#     but the variability will change to reflect different alertness states.
-#     """
-#     if current_sim_time < 50:
-#         # Starts somewhat stable (normal, alert driving - small corrections)
-#         sim_angle = random.uniform(-2.0, 2.0)
-#     elif current_sim_time < 120:
-#         # Introduce more variability (fatigue-like steering - larger, more frequent corrections)
-#         sim_angle = random.uniform(-10.0, 10.0)
-#     else:
-#         # Return to more normal, but still some variability (recovery or different driving style)
-#         sim_angle = random.uniform(-5.0, 5.0)
-
-#     # Ensure simulated angle is within a reasonable sub-range for lane-keeping
-#     return max(-45.0, min(sim_angle, 45.0))
-
-
-# def generate_simulated_vsa_lat_g(current_sim_time):
-#     """
-#     Generates a simulated VSA_LAT_G value based on the current simulation time.
-#     Range for VSA_LAT_G: [-24.5|24.452148949] m/s^2.
-#     Simulates lateral acceleration (side-to-side movement).
-#     """
-#     if current_sim_time < 50:
-#         # Normal, alert driving (smooth lane keeping)
-#         return random.uniform(-0.3, 0.3) # m/s^2
-#     elif current_sim_time < 120:
-#         # Fatigue-like driving (more side-to-side movement, weaving)
-#         return random.uniform(-1.5, 1.5) # m/s^2
-#     else:
-#         # Returning to more normal
-#         return random.uniform(-0.8, 0.8) # m/
-
-
-# def generate_simulated_vsa_yaw_1(current_sim_time):
-#     """
-#     Generates a simulated VSA_YAW_1 value based on the current simulation time.
-#     Range for VSA_YAW_1: [-125|124.75585938] deg/s.
-#     Simulates yaw rate (vehicle's rotation around its vertical axis).
-#     """
-#     if current_sim_time < 50:
-#         # Normal, alert driving (smooth turns, minimal yaw on straight)
-#         return random.uniform(-0.5, 0.5) # deg/s
-#     elif current_sim_time < 120:
-#         # Fatigue-like driving (more erratic rotation, weaving)
-#         return random.uniform(-2.0, 2.0) # deg/s
-#     else:
-#         # Returning to more normal
-#         return random.uniform(-1.0, 1.0) # deg/s
-# read_signal.py
+from Simulation_Config import *
 import random
 import math
 
@@ -243,3 +169,71 @@ def generate_simulated_vsa_maeps_myu_value(current_sim_time):
     else:
         # Return to somewhat normal or slightly reduced friction
         return random.uniform(0.5, 0.7)
+    
+# --- Main functions for Braking System Health Monitoring ---
+
+def generate_simulated_meter_sw_status_brake_fluid(current_sim_time):
+    """
+    SG_ METER_SW_STATUS_BRAKE_FLUID: 0=Normal, 1=Low
+    Simulates low brake fluid after a certain time.
+    """
+    if current_sim_time > 70 and current_sim_time < 150:
+        return 1 # Simulate low brake fluid
+    return 0 # Normal
+
+def generate_simulated_eng_sw_status_brake_no(current_sim_time):
+    """
+    SG_ ENG_SW_STATUS_BRAKE_NO: 0=Brake NOT pressed, 1=Brake pressed
+    Simulates driver pressing and releasing the brake pedal.
+    """
+    # Simulate short brake presses
+    if (current_sim_time % 10 >= 2 and current_sim_time % 10 < 4) or \
+       (current_sim_time % 10 >= 7 and current_sim_time % 10 < 8):
+        return 1 # Brake pressed
+    return 0 # Brake not pressed
+
+def generate_simulated_vsa_master_cylinder_pressure(current_sim_time, brake_pedal_pressed):
+    """
+    SG_ VSA_MASTER_CYLINDER_PRESSURE: kPa
+    Simulates master cylinder pressure based on pedal input and introduces faults.
+    """
+    if current_sim_time > 100 and current_sim_time < 130:
+        # Simulate a pressure sensor fault (stuck at low value)
+        return random.uniform(50, 150) # Very low pressure despite pedal
+    
+    if brake_pedal_pressed:
+        # Normal braking pressure
+        return random.uniform(5000, 15000) # kPa
+    else:
+        # No braking pressure, but allow for some residual/noise
+        return random.uniform(0, 50) # kPa
+
+def generate_simulated_vsa_warn_status_brake(current_sim_time):
+    """
+    SG_ VSA_WARN_STATUS_BRAKE: 0=Normal, 1=Warning
+    Simulates general brake system warning.
+    """
+    if current_sim_time > 70 and current_sim_time < 170: # Active during fluid low, MC fault, etc.
+        return 1
+    return 0
+
+
+
+def generate_simulated_vsa_warn_status_abs(current_sim_time):
+    """
+    SG_ VSA_WARN_STATUS_ABS: 0=Normal, 1=Warning
+    Simulates ABS (Anti-lock Brake System) warning.
+    """
+    if current_sim_time > 100 and current_sim_time < 170: # Active during MC fault, etc.
+        return 1
+    return 0
+
+
+def generate_simulated_vsa_warn_status_puncture(current_sim_time):
+    """
+    SG_ VSA_WARN_STATUS_PUNCTURE: 0=Normal, 1=Puncture Warning
+    Simulates a tire puncture warning.
+    """
+    if current_sim_time > 80 and current_sim_time < 100:
+        return 1 # Simulate a puncture
+    return 0
