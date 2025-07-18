@@ -2,7 +2,7 @@ import collections
 import time
 import Read_Signal 
 from Simulation_Config import *
-
+from serial_logger import SerialLogger
 from .health_monitor import HealthMonitor
 
 master_pressure_window = collections.deque()
@@ -25,7 +25,16 @@ def run_simulation():
 
     # Initialize the braking health monitor
     braking_health_monitor = HealthMonitor()
-
+    
+        # --- Serial Port Configuration ---
+    # IMPORTANT: Replace 'COMx' with your actual serial port (e.g., 'COM1' on Windows, '/dev/ttyUSB0' on Linux)
+    # IMPORTANT: Ensure the baudrate matches your receiving device.
+    serial_port_name = 'COM1'  # <--- CHANGE THIS TO YOUR SERIAL PORT
+    baud_rate = 9600          # <--- CHANGE THIS TO YOUR BAUD RATE
+    
+    # Initialize the SerialLogger
+    serial_logger = SerialLogger(serial_port_name, baud_rate)
+    
     # We will use a simple counter for simulation time, as time.sleep paces the loop
     current_sim_time = 0.0
 
@@ -66,6 +75,10 @@ def run_simulation():
         print(f"  Warnings: BRAKE={'Active' if simulated_vsa_warn_status_brake else 'Inactive'}, ABS={'Active' if simulated_vsa_warn_status_abs else 'Inactive'}, PUNCTURE={'Active' if simulated_vsa_warn_status_puncture else 'Inactive'}") # Removed ABS_MIL
         print(f"  Braking Health Alert: {braking_alert_level} | Description: {braking_alert_description}\n")
 
+                # --- Serial Output for Alerts ---
+        if serial_logger.is_active() and braking_alert_level != ALERT_LEVEL_NONE:
+            message = f"ALERT: {braking_alert_level} - {braking_alert_description}" # Newline added by log_alert
+            serial_logger.log_alert(message)
 
         # Advance simulation time for the next iteration
         current_sim_time += CAN_SAMPLE_INTERVAL_S
@@ -75,4 +88,5 @@ def run_simulation():
 
     print("\n--- Simulation Ended ---")
 
-
+        # --- Close Serial Port ---
+    serial_logger.close()
